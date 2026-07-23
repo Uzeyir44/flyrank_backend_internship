@@ -11,6 +11,11 @@ class Tasks(BaseModel):
 class Post_Task(BaseModel):
     title: str = Field(..., min_length=1)
 
+class Update_Tasks(BaseModel):
+    id: int | None = Field(None, gt=0)
+    title: str | None = Field(None, min_length=1)
+    done: bool | None = None
+
 tasks_db: list[dict] = [
     {
         "id": 1,
@@ -68,3 +73,28 @@ def create_task(task: Post_Task):
     
     tasks_db.append(new_task)
     return new_task
+
+@app.patch('/tasks/{id}', response_model=Tasks, status_code=status.HTTP_200_OK)
+def update_task(id: int, new_data: Update_Tasks):
+    for task in tasks_db:
+        if task['id'] == id:
+            new_task = new_data.model_dump(exclude_unset=True)
+            task.update(new_task)
+            return task
+    
+    raise HTTPException(
+        status_code = status.HTTP_404_NOT_FOUND,
+        detail = f"Cannot update. Task with id {id} is not found"
+    )
+
+@app.delete('/tasks/{id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(id: int):
+    for index, task in enumerate(tasks_db):
+        if task['id'] == id:
+            tasks_db.pop(index)
+            return
+    
+    raise HTTPException(
+        status_code = status.HTTP_404_NOT_FOUND,
+        detail = f"Cannot delete. Task with id {id} is not found"
+    )
