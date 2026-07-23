@@ -8,6 +8,9 @@ class Tasks(BaseModel):
     title: str = Field(..., min_length=1)
     done: bool = False
 
+class Post_Task(BaseModel):
+    title: str = Field(..., min_length=1)
+
 tasks_db: list[dict] = [
     {
         "id": 1,
@@ -54,3 +57,14 @@ def get_by_id(id: int):
         status_code = status.HTTP_404_NOT_FOUND,
         detail = "Task with id {id} not found"
     )
+
+@app.post('/tasks', response_model=Tasks, status_code=status.HTTP_201_CREATED)
+def create_task(task: Post_Task):
+    new_task = {
+        "id": len(tasks_db) + 1,
+        "title": task.title,
+        "done": False
+    }
+    
+    tasks_db.append(new_task)
+    return new_task
