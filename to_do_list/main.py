@@ -1,6 +1,32 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
 
 app = FastAPI()
+
+class Tasks(BaseModel):
+    id: int = Field(..., gt=0)
+    title: str = Field(..., min_length=1)
+    done: bool = False
+
+tasks_db: list[dict] = [
+    {
+        "id": 1,
+        "title": "Learn CRUD operation",
+        "done": True
+    },
+    
+    { 
+        "id": 2,
+        "title": "Learn Competitive Programming",
+        "done": False
+    },
+    
+    {
+        "id": 3,
+        "title": "Create the architecture of the application",
+        "done": False
+    }
+]
 
 @app.get('/')
 def root():
@@ -13,3 +39,18 @@ def root():
 @app.get('/health')
 def get_health():
     return {"status": "ok"}
+
+@app.get('/tasks', response_model=list[dict], status_code=status.HTTP_200_OK)
+def get_tasks():
+    return tasks_db
+
+@app.get('/tasks/{id}', response_model=Tasks, status_code=status.HTTP_200_OK)
+def get_by_id(id: int):
+    for task in tasks_db:
+        if task['id'] == id:
+            return task
+    
+    raise HTTPException(
+        status_code = status.HTTP_404_NOT_FOUND,
+        detail = "Task with id {id} not found"
+    )
