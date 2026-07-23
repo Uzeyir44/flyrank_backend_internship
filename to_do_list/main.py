@@ -16,7 +16,7 @@ class Update_Tasks(BaseModel):
     title: str | None = Field(None, min_length=1)
     done: bool | None = None
 
-tasks_db: list[dict] = [
+initial_db: list[dict] = [
     {
         "id": 1,
         "title": "Learn CRUD operation",
@@ -36,6 +36,8 @@ tasks_db: list[dict] = [
     }
 ]
 
+tasks_db: list[dict] = initial_db.copy()
+
 @app.get('/')
 def root():
     return { 
@@ -49,8 +51,16 @@ def get_health():
     return {"status": "ok"}
 
 @app.get('/tasks', response_model=list[dict], status_code=status.HTTP_200_OK)
-def get_tasks():
-    return tasks_db
+def get_tasks(done: bool | None = None, search: str | None = None):
+    new_db = tasks_db
+    
+    if done != None:
+        new_db = [task for task in new_db if task['done'] == done]
+
+    if search != None:
+        new_db = [task for task in new_db if task['title'].find(search) != -1]
+    
+    return new_db
 
 @app.get('/tasks/{id}', response_model=Tasks, status_code=status.HTTP_200_OK)
 def get_by_id(id: int):
@@ -63,6 +73,17 @@ def get_by_id(id: int):
         detail = "Task with id {id} not found"
     )
 
+@app.get('/stats', status_code=status.HTTP_200_OK)
+def get_stats():
+    n = len(tasks_db)
+    d = len([task for task in tasks_db if task['done'] == True])
+    
+    return {
+        "total": n,
+        "done": d,
+        "open": n - d
+    }
+
 @app.post('/tasks', response_model=Tasks, status_code=status.HTTP_201_CREATED)
 def create_task(task: Post_Task):
     new_task = {
@@ -73,6 +94,13 @@ def create_task(task: Post_Task):
     
     tasks_db.append(new_task)
     return new_task
+
+@app.post('/reset', response_model=list[dict], status_code=status.HTTP_200_OK)
+def reset_data_base():
+    global tasks_db
+    tasks_db = initial_db.copy()
+    
+    return tasks_db
 
 @app.patch('/tasks/{id}', response_model=Tasks, status_code=status.HTTP_200_OK)
 def update_task(id: int, new_data: Update_Tasks):
